@@ -326,14 +326,39 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
 
   final Set<String> _selectedCategories = {'Música', 'Live', 'Gastro', 'Club'};
   bool _onlyFree = false;
+  String _searchQuery = '';
+
 
   List<EventItem> get _filteredEvents {
-    return _events.where((event) {
-      final matchesCategory = _selectedCategories.contains(event.category);
-      final matchesPrice = !_onlyFree || event.price.contains('libre');
-      return matchesCategory && matchesPrice;
-    }).toList();
-  }
+  final query = _searchQuery.trim().toLowerCase();
+
+  return _events.where((event) {
+    final matchesCategory = _selectedCategories.contains(event.category);
+
+    // “Solo gratuitos”: hacemos comparación en minúscula para evitar fallos.
+    final priceText = event.price.toLowerCase();
+    final matchesPrice = !_onlyFree || priceText.contains('libre');
+
+    // Partimos location: "Venue, Zona"
+    final locationParts = event.location.split(',');
+    final venue = locationParts.first.trim().toLowerCase();
+    final zone = locationParts.length > 1
+        ? locationParts.last.trim().toLowerCase()
+        : '';
+
+    final titleText = event.title.toLowerCase();
+    final locationText = event.location.toLowerCase();
+
+    final matchesSearch = query.isEmpty ||
+        titleText.contains(query) ||
+        locationText.contains(query) ||
+        venue.contains(query) ||
+        zone.contains(query);
+
+    return matchesCategory && matchesPrice && matchesSearch;
+  }).toList();
+}
+
 
   void _openFilters() {
     showModalBottomSheet<void>(
@@ -385,19 +410,38 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _selectedCategories
-                .map(
-                  (category) => _Chip(
-                    label: category,
-                    icon: Icons.check_circle,
-                    isSelected: true,
-                  ),
-                )
-                .toList(),
+TextField(
+  onChanged: (value) {
+    setState(() => _searchQuery = value);
+  },
+  textInputAction: TextInputAction.search,
+  decoration: InputDecoration(
+    hintText: 'Buscar por evento, venue o zona',
+    prefixIcon: const Icon(Icons.search_rounded),
+    suffixIcon: _searchQuery.isEmpty
+        ? null
+        : IconButton(
+            tooltip: 'Limpiar',
+            onPressed: () => setState(() => _searchQuery = ''),
+            icon: const Icon(Icons.close_rounded),
           ),
+  ),
+),
+const SizedBox(height: 16),
+Wrap(
+  spacing: 10,
+  runSpacing: 10,
+  children: _selectedCategories
+      .map(
+        (category) => _Chip(
+          label: category,
+          icon: Icons.check_circle,
+          isSelected: true,
+        ),
+      )
+      .toList(),
+),
+
           const SizedBox(height: 20),
           if (_filteredEvents.isEmpty)
             Container(
