@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const TuPlanApp());
@@ -281,6 +282,7 @@ class EventsHomeScreen extends StatefulWidget {
 }
 
 class _EventsHomeScreenState extends State<EventsHomeScreen> {
+  static const String _favoritesStorageKey = 'favorite_event_ids';
   final List<EventItem> _events = const [
     EventItem(
       title: 'Sunset Rooftop Session',
@@ -325,8 +327,47 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
   ];
 
   final Set<String> _selectedCategories = {'Música', 'Live', 'Gastro', 'Club'};
+  final Set<String> _favoriteIds = {};
   bool _onlyFree = false;
   String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  String _eventId(EventItem event) {
+    return '${event.title.trim().toLowerCase()}|'
+        '${event.date.trim().toLowerCase()}|'
+        '${event.location.trim().toLowerCase()}';
+  }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIds = prefs.getStringList(_favoritesStorageKey) ?? [];
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _favoriteIds
+        ..clear()
+        ..addAll(savedIds);
+    });
+  }
+
+  Future<void> _toggleFavorite(EventItem event) async {
+    final eventId = _eventId(event);
+    setState(() {
+      if (_favoriteIds.contains(eventId)) {
+        _favoriteIds.remove(eventId);
+      } else {
+        _favoriteIds.add(eventId);
+      }
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_favoritesStorageKey, _favoriteIds.toList());
+  }
 
 
   List<EventItem> get _filteredEvents {
@@ -471,19 +512,28 @@ Wrap(
             )
           else
             ..._filteredEvents.map(
-              (event) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: EventCard(
-                  event: event,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => EventDetailScreen(event: event),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              (event) {
+                final isFavorite = _favoriteIds.contains(_eventId(event));
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: EventCard(
+                    event: event,
+                    isFavorite: isFavorite,
+                    onFavoriteToggle: () => _toggleFavorite(event),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EventDetailScreen(
+                            event: event,
+                            isFavorite: isFavorite,
+                            onFavoriteToggle: () => _toggleFavorite(event),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -515,10 +565,14 @@ class EventCard extends StatelessWidget {
   const EventCard({
     super.key,
     required this.event,
+    required this.isFavorite,
+    required this.onFavoriteToggle,
     required this.onTap,
   });
 
   final EventItem event;
+  final bool isFavorite;
+  final VoidCallback onFavoriteToggle;
   final VoidCallback onTap;
 
   @override
@@ -571,6 +625,17 @@ class EventCard extends StatelessWidget {
                             ),
                       ),
                     ),
+                  IconButton(
+                    tooltip: isFavorite
+                        ? 'Quitar de favoritos'
+                        : 'Guardar en favoritos',
+                    onPressed: onFavoriteToggle,
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color:
+                          isFavorite ? colorScheme.primary : const Color(0xFF94A3B8),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -842,10 +907,45 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   }
 }
 
-class EventDetailScreen extends StatelessWidget {
-  const EventDetailScreen({super.key, required this.event});
+class EventDetailScreen extends StatefulWidget {
+  const EventDetailScreen({
+    super.key,
+    required this.event,
+    required this.isFavorite,
+    required this.onFavoriteToggle,
+  });
 
   final EventItem event;
+  final bool isFavorite;
+  final VoidCallback onFavoriteToggle;
+
+  @override
+  State<EventDetailScreen> createState() => _EventDetailScreenState();
+}
+
+class _EventDetailScreenState extends State<EventDetailScreen> {
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.isFavorite;
+  }
+
+  @override
+  void didUpdateWidget(covariant EventDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isFavorite != widget.isFavorite) {
+      _isFavorite = widget.isFavorite;
+    }
+  }
+
+  void _handleFavoriteToggle() {
+    widget.onFavoriteToggle();
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -876,7 +976,7 @@ class EventDetailScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  event.title,
+                  widget.event.title,
                   style: textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                   ),
@@ -888,7 +988,7 @@ class EventDetailScreen extends StatelessWidget {
           Text('Resumen', style: textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
-            event.description,
+            widget.event.description,
             style: textTheme.bodyMedium?.copyWith(
               color: const Color(0xFF64748B),
               height: 1.5,
@@ -898,22 +998,22 @@ class EventDetailScreen extends StatelessWidget {
           _DetailSection(
             title: 'Horario',
             icon: Icons.calendar_today_outlined,
-            content: event.date,
+            content: widget.event.date,
           ),
           _DetailSection(
             title: 'Ubicación',
             icon: Icons.place_outlined,
-            content: event.location,
+            content: widget.event.location,
           ),
           _DetailSection(
             title: 'Categoría',
             icon: Icons.local_activity_outlined,
-            content: event.category,
+            content: widget.event.category,
           ),
           _DetailSection(
             title: 'Precio',
             icon: Icons.confirmation_number_outlined,
-            content: event.price,
+            content: widget.event.price,
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -923,9 +1023,13 @@ class EventDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.favorite_border),
-            label: const Text('Guardar en favoritos'),
+            onPressed: _handleFavoriteToggle,
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+            ),
+            label: Text(
+              _isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
+            ),
           ),
         ],
       ),
