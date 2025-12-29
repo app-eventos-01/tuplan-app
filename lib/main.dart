@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/events.dart';
+import 'notifications/notification_service.dart';
+
 void main() {
   runApp(const TuPlanApp());
 }
@@ -274,52 +277,6 @@ class AgeGateScreen extends StatelessWidget {
   }
 }
 
-const List<EventItem> kEvents = [
-  EventItem(
-    title: 'Sunset Rooftop Session',
-    date: 'Vie, 23 Ago · 19:30',
-    location: 'Mirador Altura, CDMX',
-    category: 'Música',
-    price: 'Desde \$250',
-    description:
-        'Un atardecer con DJ sets, coctelería de autor y vista panorámica.',
-    isFeatured: true,
-  ),
-  EventItem(
-    title: 'Noche de Jazz Íntimo',
-    date: 'Sáb, 24 Ago · 20:00',
-    location: 'Casa Azul, Coyoacán',
-    category: 'Live',
-    price: 'Entrada libre',
-    description: 'Ensamble en vivo con piezas clásicas y contemporáneas.',
-    isFeatured: false,
-  ),
-  EventItem(
-    title: 'Brunch & Beats',
-    date: 'Dom, 25 Ago · 12:00',
-    location: 'Terraza Roma, CDMX',
-    category: 'Gastro',
-    price: 'Desde \$180',
-    description: 'Brunch creativo con sets chill y un mercado de diseño local.',
-    isFeatured: true,
-  ),
-  EventItem(
-    title: 'Electro Night',
-    date: 'Vie, 30 Ago · 22:00',
-    location: 'Warehouse Norte, CDMX',
-    category: 'Club',
-    price: 'Desde \$320',
-    description: 'Line up internacional y visuales inmersivas toda la noche.',
-    isFeatured: false,
-  ),
-];
-
-String eventId(EventItem event) {
-  return '${event.title.trim().toLowerCase()}|'
-      '${event.date.trim().toLowerCase()}|'
-      '${event.location.trim().toLowerCase()}';
-}
-
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -329,14 +286,29 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   static const String _favoritesStorageKey = 'favorite_event_ids';
-
+  
   final Set<String> _favoriteIds = {};
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    _bootstrap();
+  }
+
+ Future<void> _bootstrap() async {
+  await NotificationService.instance.initialize();
+  await NotificationService.instance.requestPermissions();
+  await _loadFavorites();
+
+  // ✅ TEST: dispara una notificación en 10 segundos
+  await NotificationService.instance.showTestNow();
+}
+
+
+  Future<void> _initializeNotifications() async {
+    await NotificationService.instance.initialize();
+    await NotificationService.instance.requestPermissions();
   }
 
   Future<void> _loadFavorites() async {
@@ -350,6 +322,10 @@ class _HomeShellState extends State<HomeShell> {
         ..clear()
         ..addAll(savedIds);
     });
+    await NotificationService.instance.updateDailyRecommendations(
+      events: kEvents,
+      favoriteIds: _favoriteIds,
+    );
   }
 
   Future<void> _toggleFavorite(EventItem event) async {
@@ -363,6 +339,10 @@ class _HomeShellState extends State<HomeShell> {
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_favoritesStorageKey, _favoriteIds.toList());
+    await NotificationService.instance.updateDailyRecommendations(
+      events: kEvents,
+      favoriteIds: _favoriteIds,
+    );
   }
 
   @override
@@ -434,7 +414,16 @@ class EventsHomeScreen extends StatefulWidget {
 }
 
 class _EventsHomeScreenState extends State<EventsHomeScreen> {
-  final Set<String> _selectedCategories = {'Música', 'Live', 'Gastro', 'Club'};
+    final Set<String> _selectedCategories = {
+    'Fiestas',
+    'Música en vivo',
+    'Comida y ferias gastronómicas',
+    'Eventos culturales y artísticos',
+    'Eventos Deportivos',
+    'Eventos educativos',
+    'Lugares Turísticos',
+  };
+
   bool _onlyFree = false;
   String _searchQuery = '';
 
@@ -499,6 +488,20 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
             onPressed: _openFilters,
             icon: const Icon(Icons.tune_rounded),
           ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NotificationSettingsScreen(
+                    events: kEvents,
+                    favoriteIds: widget.favoriteIds,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Notificaciones',
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -523,7 +526,7 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
             },
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
-              hintText: 'Buscar por evento, venue o zona',
+              hintText: 'Buscar por evento, lugar o zona',
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: _searchQuery.isEmpty
                   ? null
@@ -591,7 +594,8 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
                           builder: (_) => EventDetailScreen(
                             event: event,
                             isFavorite: isFavorite,
-                            onFavoriteToggle: () => widget.onFavoriteToggle(event),
+                            onFavoriteToggle: () =>
+                                widget.onFavoriteToggle(event),
                           ),
                         ),
                       );
@@ -700,26 +704,6 @@ class FavoritesScreen extends StatelessWidget {
   }
 }
 
-class EventItem {
-  final String title;
-  final String date;
-  final String location;
-  final String category;
-  final String price;
-  final String description;
-  final bool isFeatured;
-
-  const EventItem({
-    required this.title,
-    required this.date,
-    required this.location,
-    required this.category,
-    required this.price,
-    required this.description,
-    required this.isFeatured,
-  });
-}
-
 class EventCard extends StatelessWidget {
   const EventCard({
     super.key,
@@ -791,8 +775,9 @@ class EventCard extends StatelessWidget {
                     onPressed: onFavoriteToggle,
                     icon: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color:
-                          isFavorite ? colorScheme.primary : const Color(0xFF94A3B8),
+                      color: isFavorite
+                          ? colorScheme.primary
+                          : const Color(0xFF94A3B8),
                     ),
                   ),
                 ],
@@ -867,8 +852,9 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor =
-        isSelected ? colorScheme.primary.withOpacity(0.12) : const Color(0xFFF1F5F9);
+    final backgroundColor = isSelected
+        ? colorScheme.primary.withOpacity(0.12)
+        : const Color(0xFFF1F5F9);
     final foregroundColor =
         isSelected ? colorScheme.primary : const Color(0xFF334155);
     return Container(
@@ -979,11 +965,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    'Música',
-                    'Live',
-                    'Gastro',
-                    'Club',
-                  ]
+                        'Fiestas',
+                        'Música en vivo',
+                        'Comida y ferias gastronómicas',
+                        'Eventos culturales y artísticos',
+                        'Eventos Deportivos',
+                        'Eventos educativos',
+                        'Lugares Turísticos',
+                      ]
+
                       .map(
                         (category) => GestureDetector(
                           onTap: () => _toggleCategory(category),
@@ -1040,7 +1030,16 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       setState(() {
                         _localCategories
                           ..clear()
-                          ..addAll(['Música', 'Live', 'Gastro', 'Club']);
+                          ..addAll([
+                            'Fiestas',
+                            'Música en vivo',
+                            'Comida y ferias gastronómicas',
+                            'Eventos culturales y artísticos',
+                            'Eventos Deportivos',
+                            'Eventos educativos',
+                            'Lugares Turísticos',
+                          ]);
+
                         _onlyFree = false;
                       });
                     },
@@ -1084,11 +1083,14 @@ class EventDetailScreen extends StatefulWidget {
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
   late bool _isFavorite;
+  bool _isAttending = false;
+  bool _attendanceRemindersEnabled = true;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.isFavorite;
+    _loadAttendanceState();
   }
 
   @override
@@ -1099,11 +1101,61 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
   }
 
+  Future<void> _loadAttendanceState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIds =
+        prefs.getStringList(NotificationService.attendanceIdsKey) ?? [];
+    final remindersEnabled =
+        prefs.getBool(NotificationService.attendanceRemindersKey) ?? true;
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _attendanceRemindersEnabled = remindersEnabled;
+      _isAttending = savedIds.contains(eventId(widget.event));
+    });
+  }
+
   void _handleFavoriteToggle() {
     widget.onFavoriteToggle();
     setState(() {
       _isFavorite = !_isFavorite;
     });
+  }
+
+  Future<void> _handleAttendanceToggle() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIds =
+        prefs.getStringList(NotificationService.attendanceIdsKey) ?? [];
+    final updatedIds = savedIds.toSet();
+    final id = eventId(widget.event);
+    final isAttending = updatedIds.contains(id);
+
+    setState(() {
+      if (isAttending) {
+        updatedIds.remove(id);
+      } else {
+        updatedIds.add(id);
+      }
+      _isAttending = !isAttending;
+    });
+
+    await prefs.setStringList(
+      NotificationService.attendanceIdsKey,
+      updatedIds.toList(),
+    );
+
+    if (!isAttending) {
+      if (_attendanceRemindersEnabled) {
+        await NotificationService.instance.scheduleAttendanceNotifications(
+          widget.event,
+        );
+      }
+    } else {
+      await NotificationService.instance.cancelAttendanceNotifications(
+        widget.event,
+      );
+    }
   }
 
   @override
@@ -1182,6 +1234,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
+            onPressed: _handleAttendanceToggle,
+            icon: Icon(
+              _isAttending ? Icons.event_busy : Icons.event_available_outlined,
+            ),
+            label: Text(
+              _isAttending ? 'Cancelar asistencia' : 'Confirmar asistencia',
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
             onPressed: _handleFavoriteToggle,
             icon: Icon(
               _isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -1189,6 +1251,185 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             label: Text(
               _isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class NotificationSettingsScreen extends StatefulWidget {
+  const NotificationSettingsScreen({
+    super.key,
+    required this.events,
+    required this.favoriteIds,
+  });
+
+  final List<EventItem> events;
+  final Set<String> favoriteIds;
+
+  @override
+  State<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
+}
+
+class _NotificationSettingsScreenState
+    extends State<NotificationSettingsScreen> {
+  bool _dailyRecommendations = false;
+  bool _attendanceReminders = true;
+  Set<String> _attendanceIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _dailyRecommendations =
+          prefs.getBool(NotificationService.dailyRecommendationsKey) ?? false;
+      _attendanceReminders =
+          prefs.getBool(NotificationService.attendanceRemindersKey) ?? true;
+      _attendanceIds =
+          (prefs.getStringList(NotificationService.attendanceIdsKey) ?? [])
+              .toSet();
+    });
+  }
+
+  Future<void> _toggleDailyRecommendations(bool value) async {
+    setState(() => _dailyRecommendations = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(NotificationService.dailyRecommendationsKey, value);
+    if (value) {
+      await NotificationService.instance.updateDailyRecommendations(
+        events: widget.events,
+        favoriteIds: widget.favoriteIds,
+      );
+    } else {
+      await NotificationService.instance.cancelDailyRecommendations();
+    }
+  }
+
+  Future<void> _toggleAttendanceReminders(bool value) async {
+    setState(() => _attendanceReminders = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(NotificationService.attendanceRemindersKey, value);
+    if (!value) {
+      await NotificationService.instance
+          .cancelAttendanceNotificationsForIds(_attendanceIds);
+      return;
+    }
+
+    final eventsById = {
+      for (final event in widget.events) eventId(event): event,
+    };
+    for (final id in _attendanceIds) {
+      final event = eventsById[id];
+      if (event != null) {
+        await NotificationService.instance.scheduleAttendanceNotifications(
+          event,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notificaciones'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        children: [
+          Text(
+            'Configura tus avisos',
+            style: textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Activa solo lo que quieras recibir en tu teléfono.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _NotificationToggleTile(
+            title: 'Recomendaciones diarias',
+            subtitle: 'Eventos sugeridos cada mañana a las 10:00 AM.',
+            value: _dailyRecommendations,
+            onChanged: _toggleDailyRecommendations,
+          ),
+          const SizedBox(height: 12),
+          _NotificationToggleTile(
+            title: 'Recordatorios de asistencia',
+            subtitle: 'Avisos cuando confirmas que vas a un evento.',
+            value: _attendanceReminders,
+            onChanged: _toggleAttendanceReminders,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Puedes cambiar estas opciones en cualquier momento.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: const Color(0xFF94A3B8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationToggleTile extends StatelessWidget {
+  const _NotificationToggleTile({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
           ),
         ],
       ),
