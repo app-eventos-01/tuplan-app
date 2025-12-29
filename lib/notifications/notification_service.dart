@@ -194,6 +194,7 @@ class NotificationService {
         orElse: () => EventItem(
           title: '',
           date: '',
+          startsAt: DateTime.now(),
           location: '',
           category: '',
           price: '',
