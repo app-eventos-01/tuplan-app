@@ -247,7 +247,7 @@ class AgeGateScreen extends StatelessWidget {
                             onPressed: () {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
-                                  builder: (_) => const EventsHomeScreen(),
+                                  builder: (_) => const HomeShell(),
                                 ),
                               );
                             },
@@ -274,73 +274,69 @@ class AgeGateScreen extends StatelessWidget {
   }
 }
 
-class EventsHomeScreen extends StatefulWidget {
-  const EventsHomeScreen({super.key});
+const List<EventItem> kEvents = [
+  EventItem(
+    title: 'Sunset Rooftop Session',
+    date: 'Vie, 23 Ago · 19:30',
+    location: 'Mirador Altura, CDMX',
+    category: 'Música',
+    price: 'Desde \$250',
+    description:
+        'Un atardecer con DJ sets, coctelería de autor y vista panorámica.',
+    isFeatured: true,
+  ),
+  EventItem(
+    title: 'Noche de Jazz Íntimo',
+    date: 'Sáb, 24 Ago · 20:00',
+    location: 'Casa Azul, Coyoacán',
+    category: 'Live',
+    price: 'Entrada libre',
+    description: 'Ensamble en vivo con piezas clásicas y contemporáneas.',
+    isFeatured: false,
+  ),
+  EventItem(
+    title: 'Brunch & Beats',
+    date: 'Dom, 25 Ago · 12:00',
+    location: 'Terraza Roma, CDMX',
+    category: 'Gastro',
+    price: 'Desde \$180',
+    description: 'Brunch creativo con sets chill y un mercado de diseño local.',
+    isFeatured: true,
+  ),
+  EventItem(
+    title: 'Electro Night',
+    date: 'Vie, 30 Ago · 22:00',
+    location: 'Warehouse Norte, CDMX',
+    category: 'Club',
+    price: 'Desde \$320',
+    description: 'Line up internacional y visuales inmersivas toda la noche.',
+    isFeatured: false,
+  ),
+];
 
-  @override
-  State<EventsHomeScreen> createState() => _EventsHomeScreenState();
+String eventId(EventItem event) {
+  return '${event.title.trim().toLowerCase()}|'
+      '${event.date.trim().toLowerCase()}|'
+      '${event.location.trim().toLowerCase()}';
 }
 
-class _EventsHomeScreenState extends State<EventsHomeScreen> {
-  static const String _favoritesStorageKey = 'favorite_event_ids';
-  final List<EventItem> _events = const [
-    EventItem(
-      title: 'Sunset Rooftop Session',
-      date: 'Vie, 23 Ago · 19:30',
-      location: 'Mirador Altura, CDMX',
-      category: 'Música',
-      price: 'Desde \$250',
-      description:
-          'Un atardecer con DJ sets, coctelería de autor y vista panorámica.',
-      isFeatured: true,
-    ),
-    EventItem(
-      title: 'Noche de Jazz Íntimo',
-      date: 'Sáb, 24 Ago · 20:00',
-      location: 'Casa Azul, Coyoacán',
-      category: 'Live',
-      price: 'Entrada libre',
-      description:
-          'Ensamble en vivo con piezas clásicas y contemporáneas.',
-      isFeatured: false,
-    ),
-    EventItem(
-      title: 'Brunch & Beats',
-      date: 'Dom, 25 Ago · 12:00',
-      location: 'Terraza Roma, CDMX',
-      category: 'Gastro',
-      price: 'Desde \$180',
-      description:
-          'Brunch creativo con sets chill y un mercado de diseño local.',
-      isFeatured: true,
-    ),
-    EventItem(
-      title: 'Electro Night',
-      date: 'Vie, 30 Ago · 22:00',
-      location: 'Warehouse Norte, CDMX',
-      category: 'Club',
-      price: 'Desde \$320',
-      description:
-          'Line up internacional y visuales inmersivas toda la noche.',
-      isFeatured: false,
-    ),
-  ];
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
 
-  final Set<String> _selectedCategories = {'Música', 'Live', 'Gastro', 'Club'};
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  static const String _favoritesStorageKey = 'favorite_event_ids';
+
   final Set<String> _favoriteIds = {};
-  bool _onlyFree = false;
-  String _searchQuery = '';
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadFavorites();
-  }
-
-  String _eventId(EventItem event) {
-    return '${event.title.trim().toLowerCase()}|'
-        '${event.date.trim().toLowerCase()}|'
-        '${event.location.trim().toLowerCase()}';
   }
 
   Future<void> _loadFavorites() async {
@@ -357,49 +353,119 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
   }
 
   Future<void> _toggleFavorite(EventItem event) async {
-    final eventId = _eventId(event);
+    final id = eventId(event);
     setState(() {
-      if (_favoriteIds.contains(eventId)) {
-        _favoriteIds.remove(eventId);
+      if (_favoriteIds.contains(id)) {
+        _favoriteIds.remove(id);
       } else {
-        _favoriteIds.add(eventId);
+        _favoriteIds.add(id);
       }
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_favoritesStorageKey, _favoriteIds.toList());
   }
 
-
-  List<EventItem> get _filteredEvents {
-  final query = _searchQuery.trim().toLowerCase();
-
-  return _events.where((event) {
-    final matchesCategory = _selectedCategories.contains(event.category);
-
-    // “Solo gratuitos”: hacemos comparación en minúscula para evitar fallos.
-    final priceText = event.price.toLowerCase();
-    final matchesPrice = !_onlyFree || priceText.contains('libre');
-
-    // Partimos location: "Venue, Zona"
-    final locationParts = event.location.split(',');
-    final venue = locationParts.first.trim().toLowerCase();
-    final zone = locationParts.length > 1
-        ? locationParts.last.trim().toLowerCase()
-        : '';
-
-    final titleText = event.title.toLowerCase();
-    final locationText = event.location.toLowerCase();
-
-    final matchesSearch = query.isEmpty ||
-        titleText.contains(query) ||
-        locationText.contains(query) ||
-        venue.contains(query) ||
-        zone.contains(query);
-
-    return matchesCategory && matchesPrice && matchesSearch;
-  }).toList();
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final screens = [
+      EventsHomeScreen(
+        favoriteIds: _favoriteIds,
+        onFavoriteToggle: _toggleFavorite,
+      ),
+      FavoritesScreen(
+        events: kEvents,
+        favoriteIds: _favoriteIds,
+        onFavoriteToggle: _toggleFavorite,
+      ),
+    ];
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 20,
+              offset: const Offset(0, -8),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (value) => setState(() => _selectedIndex = value),
+          backgroundColor: Colors.white,
+          selectedItemColor: colorScheme.primary,
+          unselectedItemColor: const Color(0xFF94A3B8),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.explore_outlined),
+              activeIcon: Icon(Icons.explore_rounded),
+              label: 'Explorar',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border),
+              activeIcon: Icon(Icons.favorite),
+              label: 'Favoritos',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
+class EventsHomeScreen extends StatefulWidget {
+  const EventsHomeScreen({
+    super.key,
+    required this.favoriteIds,
+    required this.onFavoriteToggle,
+  });
+
+  final Set<String> favoriteIds;
+  final void Function(EventItem event) onFavoriteToggle;
+
+  @override
+  State<EventsHomeScreen> createState() => _EventsHomeScreenState();
+}
+
+class _EventsHomeScreenState extends State<EventsHomeScreen> {
+  final Set<String> _selectedCategories = {'Música', 'Live', 'Gastro', 'Club'};
+  bool _onlyFree = false;
+  String _searchQuery = '';
+
+  List<EventItem> get _filteredEvents {
+    final query = _searchQuery.trim().toLowerCase();
+
+    return kEvents.where((event) {
+      final matchesCategory = _selectedCategories.contains(event.category);
+
+      // “Solo gratuitos”: hacemos comparación en minúscula para evitar fallos.
+      final priceText = event.price.toLowerCase();
+      final matchesPrice = !_onlyFree || priceText.contains('libre');
+
+      // Partimos location: "Venue, Zona"
+      final locationParts = event.location.split(',');
+      final venue = locationParts.first.trim().toLowerCase();
+      final zone =
+          locationParts.length > 1 ? locationParts.last.trim().toLowerCase() : '';
+
+      final titleText = event.title.toLowerCase();
+      final locationText = event.location.toLowerCase();
+
+      final matchesSearch = query.isEmpty ||
+          titleText.contains(query) ||
+          locationText.contains(query) ||
+          venue.contains(query) ||
+          zone.contains(query);
+
+      return matchesCategory && matchesPrice && matchesSearch;
+    }).toList();
+  }
 
   void _openFilters() {
     showModalBottomSheet<void>(
@@ -451,38 +517,37 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-TextField(
-  onChanged: (value) {
-    setState(() => _searchQuery = value);
-  },
-  textInputAction: TextInputAction.search,
-  decoration: InputDecoration(
-    hintText: 'Buscar por evento, venue o zona',
-    prefixIcon: const Icon(Icons.search_rounded),
-    suffixIcon: _searchQuery.isEmpty
-        ? null
-        : IconButton(
-            tooltip: 'Limpiar',
-            onPressed: () => setState(() => _searchQuery = ''),
-            icon: const Icon(Icons.close_rounded),
+          TextField(
+            onChanged: (value) {
+              setState(() => _searchQuery = value);
+            },
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Buscar por evento, venue o zona',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _searchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Limpiar',
+                      onPressed: () => setState(() => _searchQuery = ''),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+            ),
           ),
-  ),
-),
-const SizedBox(height: 16),
-Wrap(
-  spacing: 10,
-  runSpacing: 10,
-  children: _selectedCategories
-      .map(
-        (category) => _Chip(
-          label: category,
-          icon: Icons.check_circle,
-          isSelected: true,
-        ),
-      )
-      .toList(),
-),
-
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _selectedCategories
+                .map(
+                  (category) => _Chip(
+                    label: category,
+                    icon: Icons.check_circle,
+                    isSelected: true,
+                  ),
+                )
+                .toList(),
+          ),
           const SizedBox(height: 20),
           if (_filteredEvents.isEmpty)
             Container(
@@ -513,20 +578,20 @@ Wrap(
           else
             ..._filteredEvents.map(
               (event) {
-                final isFavorite = _favoriteIds.contains(_eventId(event));
+                final isFavorite = widget.favoriteIds.contains(eventId(event));
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: EventCard(
                     event: event,
                     isFavorite: isFavorite,
-                    onFavoriteToggle: () => _toggleFavorite(event),
+                    onFavoriteToggle: () => widget.onFavoriteToggle(event),
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => EventDetailScreen(
                             event: event,
                             isFavorite: isFavorite,
-                            onFavoriteToggle: () => _toggleFavorite(event),
+                            onFavoriteToggle: () => widget.onFavoriteToggle(event),
                           ),
                         ),
                       );
@@ -535,6 +600,100 @@ Wrap(
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class FavoritesScreen extends StatelessWidget {
+  const FavoritesScreen({
+    super.key,
+    required this.events,
+    required this.favoriteIds,
+    required this.onFavoriteToggle,
+  });
+
+  final List<EventItem> events;
+  final Set<String> favoriteIds;
+  final void Function(EventItem event) onFavoriteToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final favorites = events
+        .where((event) => favoriteIds.contains(eventId(event)))
+        .toList();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Favoritos'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        children: [
+          if (favorites.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(
+                      Icons.favorite_border,
+                      size: 32,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sin favoritos aún',
+                    style: textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Guarda eventos para verlos aquí y planear tu próxima salida.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF64748B),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...favorites.map((event) {
+              final isFavorite = favoriteIds.contains(eventId(event));
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: EventCard(
+                  event: event,
+                  isFavorite: isFavorite,
+                  onFavoriteToggle: () => onFavoriteToggle(event),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EventDetailScreen(
+                          event: event,
+                          isFavorite: isFavorite,
+                          onFavoriteToggle: () => onFavoriteToggle(event),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
         ],
       ),
     );
