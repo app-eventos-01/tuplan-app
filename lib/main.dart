@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/attendance_store.dart';
 import 'data/events.dart';
 import 'notifications/notification_service.dart';
 
@@ -118,96 +119,44 @@ class TuPlanApp extends StatelessWidget {
             borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
           ),
         ),
-        bottomSheetTheme: BottomSheetThemeData(
-          backgroundColor: colorScheme.surface,
-          surfaceTintColor: Colors.transparent,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            side: BorderSide(color: colorScheme.outline),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-          ),
-        ),
       ),
-      home: const AgeGateScreen(),
+      home: const OnboardingScreen(),
     );
   }
 }
 
-class AgeGateScreen extends StatelessWidget {
-  const AgeGateScreen({super.key});
+class OnboardingScreen extends StatelessWidget {
+  const OnboardingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  Icons.nightlife_outlined,
-                  color: colorScheme.primary,
-                  size: 36,
+              Text('¡Hola!', style: textTheme.displayLarge),
+              const SizedBox(height: 8),
+              Text(
+                'Descubre planes a tu medida y guarda tus favoritos.',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: const Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 28),
-              Text(
-                'Antes de empezar',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Confirma que tienes la edad mínima para acceder a eventos y '
-                'experiencias nocturnas en tu ciudad.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF475569),
-                      height: 1.4,
-                    ),
-              ),
-              const SizedBox(height: 24),
+              const Spacer(),
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12),
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -215,49 +164,43 @@ class AgeGateScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '¿Eres mayor de 18 años?',
-                      style: Theme.of(context).textTheme.titleLarge,
+                      'Cuéntanos qué te gusta',
+                      style: textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Text(
-                      'Necesitamos comprobar tu edad para mostrarte eventos. '
-                      'Esta información no se guarda.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF64748B),
-                            height: 1.4,
-                          ),
+                      'Selecciona algunas categorías para personalizar tus '
+                      'recomendaciones.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: const [
+                        _CategoryChip(label: 'Fiestas'),
+                        _CategoryChip(label: 'Música'),
+                        _CategoryChip(label: 'Gastronomía'),
+                        _CategoryChip(label: 'Cultura'),
+                        _CategoryChip(label: 'Deportes'),
+                        _CategoryChip(label: 'Educación'),
+                      ],
                     ),
                     const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Necesitas ser mayor de edad para continuar.',
-                                  ),
-                                ),
-                              );
-                            },
-                            child: const Text('No, salir'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) => const HomeShell(),
-                                ),
-                              );
-                            },
-                            child: const Text('Sí, continuar'),
-                          ),
-                        ),
-                      ],
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const HomeShell(),
+                            ),
+                          );
+                        },
+                        child: const Text('Comenzar'),
+                      ),
                     ),
                   ],
                 ),
@@ -300,9 +243,6 @@ class _HomeShellState extends State<HomeShell> {
   await NotificationService.instance.initialize();
   await NotificationService.instance.requestPermissions();
   await _loadFavorites();
-
-  // ✅ TEST: dispara una notificación en 10 segundos
-  await NotificationService.instance.showTestNow();
 }
 
 
@@ -345,9 +285,10 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
     final screens = [
       EventsHomeScreen(
         favoriteIds: _favoriteIds,
@@ -359,7 +300,26 @@ class _HomeShellState extends State<HomeShell> {
         onFavoriteToggle: _toggleFavorite,
       ),
     ];
+
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('TuPlan'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NotificationSettingsScreen(
+                    events: kEvents,
+                    favoriteIds: _favoriteIds,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: IndexedStack(
         index: _selectedIndex,
         children: screens,
@@ -423,188 +383,255 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
     'Eventos educativos',
     'Lugares Turísticos',
   };
-
   bool _onlyFree = false;
-  String _searchQuery = '';
-
-  List<EventItem> get _filteredEvents {
-    final query = _searchQuery.trim().toLowerCase();
-
-    return kEvents.where((event) {
-      final matchesCategory = _selectedCategories.contains(event.category);
-
-      // “Solo gratuitos”: hacemos comparación en minúscula para evitar fallos.
-      final priceText = event.price.toLowerCase();
-      final matchesPrice = !_onlyFree || priceText.contains('libre');
-
-      // Partimos location: "Venue, Zona"
-      final locationParts = event.location.split(',');
-      final venue = locationParts.first.trim().toLowerCase();
-      final zone =
-          locationParts.length > 1 ? locationParts.last.trim().toLowerCase() : '';
-
-      final titleText = event.title.toLowerCase();
-      final locationText = event.location.toLowerCase();
-
-      final matchesSearch = query.isEmpty ||
-          titleText.contains(query) ||
-          locationText.contains(query) ||
-          venue.contains(query) ||
-          zone.contains(query);
-
-      return matchesCategory && matchesPrice && matchesSearch;
-    }).toList();
-  }
-
-  void _openFilters() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return FilterBottomSheet(
-          selectedCategories: _selectedCategories,
-          onlyFree: _onlyFree,
-          onApply: (categories, onlyFree) {
-            setState(() {
-              _selectedCategories
-                ..clear()
-                ..addAll(categories);
-              _onlyFree = onlyFree;
-            });
-          },
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('TuPlan'),
-        actions: [
-          IconButton(
-            onPressed: _openFilters,
-            icon: const Icon(Icons.tune_rounded),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => NotificationSettingsScreen(
-                    events: kEvents,
-                    favoriteIds: widget.favoriteIds,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notificaciones',
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            'Encuentra tu siguiente plan',
-            style: textTheme.headlineMedium,
-          ),
+          Text('Explorar', style: textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(
-            'Eventos curados para disfrutar la ciudad con estilo.',
+            'Encuentra experiencias que están pasando cerca de ti.',
             style: textTheme.bodyMedium?.copyWith(
               color: const Color(0xFF64748B),
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            onChanged: (value) {
-              setState(() => _searchQuery = value);
-            },
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'Buscar por evento, lugar o zona',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _searchQuery.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Limpiar',
-                      onPressed: () => setState(() => _searchQuery = ''),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+            ElevatedButton(
+              onPressed: () => NotificationService.instance.showTestNow(),
+              child: const Text('Enviar notificación de prueba'),
             ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: _selectedCategories
-                .map(
-                  (category) => _Chip(
-                    label: category,
-                    icon: Icons.check_circle,
-                    isSelected: true,
-                  ),
-                )
-                .toList(),
-          ),
           const SizedBox(height: 20),
-          if (_filteredEvents.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.event_busy, size: 42),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No hay eventos disponibles',
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '¿Qué plan quieres hoy?',
                     style: textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Ajusta tus filtros o vuelve más tarde.',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF64748B),
+                ),
+                IconButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(28),
+                        ),
+                      ),
+                      builder: (_) => _FiltersSheet(
+                        selectedCategories: _selectedCategories,
+                        onlyFree: _onlyFree,
+                        onApply: (categories, onlyFree) {
+                          setState(() {
+                            _selectedCategories
+                              ..clear()
+                              ..addAll(categories);
+                            _onlyFree = onlyFree;
+                          });
+                        },
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.tune),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text('Recomendados', style: textTheme.titleLarge),
+          const SizedBox(height: 12),
+          _EventListSection(
+            title: 'Planes destacados',
+            events: _filteredEvents.take(3).toList(),
+            favoriteIds: widget.favoriteIds,
+            onFavoriteToggle: widget.onFavoriteToggle,
+          ),
+          const SizedBox(height: 24),
+          Text('Cerca de ti', style: textTheme.titleLarge),
+          const SizedBox(height: 12),
+          _EventListSection(
+            title: 'Planes disponibles',
+            events: _filteredEvents,
+            favoriteIds: widget.favoriteIds,
+            onFavoriteToggle: widget.onFavoriteToggle,
+          ),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  List<EventItem> get _filteredEvents {
+    return kEvents.where((event) {
+      final matchesCategory = _selectedCategories.contains(event.category);
+      final matchesPrice = !_onlyFree || event.price.toLowerCase().contains('libre');
+      return matchesCategory && matchesPrice;
+    }).toList();
+  }
+}
+
+class _EventListSection extends StatelessWidget {
+  const _EventListSection({
+    required this.title,
+    required this.events,
+    required this.favoriteIds,
+    required this.onFavoriteToggle,
+  });
+
+  final String title;
+  final List<EventItem> events;
+  final Set<String> favoriteIds;
+  final void Function(EventItem event) onFavoriteToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    if (events.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          'No encontramos eventos con esos filtros.',
+          style: textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF64748B),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: events.map((event) {
+        final isFavorite = favoriteIds.contains(eventId(event));
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: EventCard(
+            event: event,
+            isFavorite: isFavorite,
+            onFavoriteToggle: () => onFavoriteToggle(event),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => EventDetailScreen(
+                    event: event,
+                    isFavorite: isFavorite,
+                    onFavoriteToggle: () => onFavoriteToggle(event),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class EventCard extends StatelessWidget {
+  const EventCard({
+    super.key,
+    required this.event,
+    required this.isFavorite,
+    required this.onFavoriteToggle,
+    required this.onTap,
+  });
+
+  final EventItem event;
+  final bool isFavorite;
+  final VoidCallback onFavoriteToggle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      event.title,
+                      style: textTheme.titleLarge,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onFavoriteToggle,
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: isFavorite ? Colors.redAccent : null,
                     ),
                   ),
                 ],
               ),
-            )
-          else
-            ..._filteredEvents.map(
-              (event) {
-                final isFavorite = widget.favoriteIds.contains(eventId(event));
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: EventCard(
-                    event: event,
-                    isFavorite: isFavorite,
-                    onFavoriteToggle: () => widget.onFavoriteToggle(event),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => EventDetailScreen(
-                            event: event,
-                            isFavorite: isFavorite,
-                            onFavoriteToggle: () =>
-                                widget.onFavoriteToggle(event),
-                          ),
-                        ),
-                      );
-                    },
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      event.date,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
-        ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      event.location,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                children: [
+                  Chip(label: Text(event.category)),
+                  Chip(label: Text(event.price)),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -624,58 +651,41 @@ class FavoritesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final favorites = events
         .where((event) => favoriteIds.contains(eventId(event)))
         .toList();
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Favoritos'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
+          Text(
+            'Favoritos',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Guarda tus eventos preferidos para volver a verlos rápido.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF64748B),
+                ),
+          ),
+          const SizedBox(height: 20),
           if (favorites.isEmpty)
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.favorite_border,
-                      size: 32,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Sin favoritos aún',
-                    style: textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Guarda eventos para verlos aquí y planear tu próxima salida.',
-                    textAlign: TextAlign.center,
-                    style: textTheme.bodyMedium?.copyWith(
+              child: Text(
+                'Aún no tienes favoritos. Explora y guarda planes.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF64748B),
-                      height: 1.4,
                     ),
-                  ),
-                ],
               ),
-            )
-          else
+            ),
+          if (favorites.isNotEmpty)
             ...favorites.map((event) {
               final isFavorite = favoriteIds.contains(eventId(event));
               return Padding(
@@ -698,192 +708,41 @@ class FavoritesScreen extends StatelessWidget {
                 ),
               );
             }),
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
 }
 
-class EventCard extends StatelessWidget {
-  const EventCard({
-    super.key,
-    required this.event,
-    required this.isFavorite,
-    required this.onFavoriteToggle,
-    required this.onTap,
-  });
-
-  final EventItem event;
-  final bool isFavorite;
-  final VoidCallback onFavoriteToggle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      event.title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  if (event.isFeatured)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        'Destacado',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: colorScheme.secondary,
-                              fontSize: 12,
-                            ),
-                      ),
-                    ),
-                  IconButton(
-                    tooltip: isFavorite
-                        ? 'Quitar de favoritos'
-                        : 'Guardar en favoritos',
-                    onPressed: onFavoriteToggle,
-                    icon: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: isFavorite
-                          ? colorScheme.primary
-                          : const Color(0xFF94A3B8),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                event.description,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF64748B),
-                      height: 1.4,
-                    ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _Chip(
-                    label: event.category,
-                    icon: Icons.local_activity_outlined,
-                    isSelected: false,
-                  ),
-                  _Chip(
-                    label: event.date,
-                    icon: Icons.calendar_today_outlined,
-                    isSelected: false,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.place_outlined, color: colorScheme.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      event.location,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    event.price,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-  });
+class _CategoryChip extends StatefulWidget {
+  const _CategoryChip({required this.label});
 
   final String label;
-  final IconData icon;
-  final bool isSelected;
+
+  @override
+  State<_CategoryChip> createState() => _CategoryChipState();
+}
+
+class _CategoryChipState extends State<_CategoryChip> {
+  bool _selected = false;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = isSelected
-        ? colorScheme.primary.withOpacity(0.12)
-        : const Color(0xFFF1F5F9);
-    final foregroundColor =
-        isSelected ? colorScheme.primary : const Color(0xFF334155);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: foregroundColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: foregroundColor,
-                ),
-          ),
-        ],
-      ),
+    return ChoiceChip(
+      label: Text(widget.label),
+      selected: _selected,
+      onSelected: (value) {
+        setState(() {
+          _selected = value;
+        });
+      },
     );
   }
 }
 
-class FilterBottomSheet extends StatefulWidget {
-  const FilterBottomSheet({
-    super.key,
+class _FiltersSheet extends StatefulWidget {
+  const _FiltersSheet({
     required this.selectedCategories,
     required this.onlyFree,
     required this.onApply,
@@ -894,28 +753,18 @@ class FilterBottomSheet extends StatefulWidget {
   final void Function(Set<String> categories, bool onlyFree) onApply;
 
   @override
-  State<FilterBottomSheet> createState() => _FilterBottomSheetState();
+  State<_FiltersSheet> createState() => _FiltersSheetState();
 }
 
-class _FilterBottomSheetState extends State<FilterBottomSheet> {
-  late final Set<String> _localCategories;
+class _FiltersSheetState extends State<_FiltersSheet> {
+  late Set<String> _localCategories;
   late bool _onlyFree;
 
   @override
   void initState() {
     super.initState();
-    _localCategories = {...widget.selectedCategories};
+    _localCategories = Set<String>.from(widget.selectedCategories);
     _onlyFree = widget.onlyFree;
-  }
-
-  void _toggleCategory(String category) {
-    setState(() {
-      if (_localCategories.contains(category)) {
-        _localCategories.remove(category);
-      } else {
-        _localCategories.add(category);
-      }
-    });
   }
 
   @override
@@ -923,48 +772,119 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 20,
+        right: 20,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Text('Filtros', style: textTheme.titleLarge),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Categorías', style: textTheme.titleMedium),
+          ),
           const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(999),
-            ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _FilterChip(
+                label: 'Fiestas',
+                selected: _localCategories.contains('Fiestas'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Fiestas')
+                        : _localCategories.remove('Fiestas');
+                  });
+                },
+              ),
+              _FilterChip(
+                label: 'Música en vivo',
+                selected: _localCategories.contains('Música en vivo'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Música en vivo')
+                        : _localCategories.remove('Música en vivo');
+                  });
+                },
+              ),
+              _FilterChip(
+                label: 'Comida y ferias gastronómicas',
+                selected: _localCategories.contains('Comida y ferias gastronómicas'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Comida y ferias gastronómicas')
+                        : _localCategories.remove('Comida y ferias gastronómicas');
+                  });
+                },
+              ),
+              _FilterChip(
+                label: 'Eventos culturales y artísticos',
+                selected:
+                    _localCategories.contains('Eventos culturales y artísticos'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Eventos culturales y artísticos')
+                        : _localCategories.remove('Eventos culturales y artísticos');
+                  });
+                },
+              ),
+              _FilterChip(
+                label: 'Eventos Deportivos',
+                selected: _localCategories.contains('Eventos Deportivos'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Eventos Deportivos')
+                        : _localCategories.remove('Eventos Deportivos');
+                  });
+                },
+              ),
+              _FilterChip(
+                label: 'Eventos educativos',
+                selected: _localCategories.contains('Eventos educativos'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Eventos educativos')
+                        : _localCategories.remove('Eventos educativos');
+                  });
+                },
+              ),
+              _FilterChip(
+                label: 'Lugares Turísticos',
+                selected: _localCategories.contains('Lugares Turísticos'),
+                onSelected: (selected) {
+                  setState(() {
+                    selected
+                        ? _localCategories.add('Lugares Turísticos')
+                        : _localCategories.remove('Lugares Turísticos');
+                  });
+                },
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Filtrar eventos',
-                    style: textTheme.titleLarge,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ],
-            ),
+          const SizedBox(height: 20),
+          SwitchListTile(
+            value: _onlyFree,
+            onChanged: (value) => setState(() => _onlyFree = value),
+            title: const Text('Solo eventos gratuitos'),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Categorías', style: textTheme.titleMedium),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _localCategories = {
                         'Fiestas',
                         'Música en vivo',
                         'Comida y ferias gastronómicas',
@@ -972,95 +892,49 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         'Eventos Deportivos',
                         'Eventos educativos',
                         'Lugares Turísticos',
-                      ]
+                      };
 
-                      .map(
-                        (category) => GestureDetector(
-                          onTap: () => _toggleCategory(category),
-                          child: _Chip(
-                            label: category,
-                            icon: Icons.label_outline,
-                            isSelected: _localCategories.contains(category),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                      _onlyFree = false;
+                    });
+                  },
+                  child: const Text('Restablecer'),
                 ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.money_off_csred_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Solo eventos gratuitos',
-                          style: textTheme.bodyMedium,
-                        ),
-                      ),
-                      Switch.adaptive(
-                        value: _onlyFree,
-                        onChanged: (value) {
-                          setState(() => _onlyFree = value);
-                        },
-                      ),
-                    ],
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onApply(_localCategories, _onlyFree);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Aplicar'),
                 ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _localCategories
-                          ..clear()
-                          ..addAll([
-                            'Fiestas',
-                            'Música en vivo',
-                            'Comida y ferias gastronómicas',
-                            'Eventos culturales y artísticos',
-                            'Eventos Deportivos',
-                            'Eventos educativos',
-                            'Lugares Turísticos',
-                          ]);
-
-                        _onlyFree = false;
-                      });
-                    },
-                    child: const Text('Restablecer'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onApply(_localCategories, _onlyFree);
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Aplicar'),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
     );
   }
 }
@@ -1102,9 +976,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _loadAttendanceState() async {
+    final attending = await isAttending(eventId(widget.event));
     final prefs = await SharedPreferences.getInstance();
-    final savedIds =
-        prefs.getStringList(NotificationService.attendanceIdsKey) ?? [];
     final remindersEnabled =
         prefs.getBool(NotificationService.attendanceRemindersKey) ?? true;
     if (!mounted) {
@@ -1112,7 +985,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
     setState(() {
       _attendanceRemindersEnabled = remindersEnabled;
-      _isAttending = savedIds.contains(eventId(widget.event));
+      _isAttending = attending;
     });
   }
 
@@ -1124,35 +997,22 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _handleAttendanceToggle() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedIds =
-        prefs.getStringList(NotificationService.attendanceIdsKey) ?? [];
-    final updatedIds = savedIds.toSet();
     final id = eventId(widget.event);
-    final isAttending = updatedIds.contains(id);
+    final updatedIds = await toggleAttending(id);
+    final isAttendingNow = updatedIds.contains(id);
 
     setState(() {
-      if (isAttending) {
-        updatedIds.remove(id);
-      } else {
-        updatedIds.add(id);
-      }
-      _isAttending = !isAttending;
+      _isAttending = isAttendingNow;
     });
 
-    await prefs.setStringList(
-      NotificationService.attendanceIdsKey,
-      updatedIds.toList(),
-    );
-
-    if (!isAttending) {
+    if (isAttendingNow) {
       if (_attendanceRemindersEnabled) {
-        await NotificationService.instance.scheduleAttendanceNotifications(
+        await NotificationService.instance.scheduleEventNotifications(
           widget.event,
         );
       }
     } else {
-      await NotificationService.instance.cancelAttendanceNotifications(
+      await NotificationService.instance.cancelEventNotifications(
         widget.event,
       );
     }
@@ -1228,15 +1088,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.event_available),
-            label: const Text('Reservar ahora'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
             onPressed: _handleAttendanceToggle,
             icon: Icon(
-              _isAttending ? Icons.event_busy : Icons.event_available_outlined,
+              _isAttending ? Icons.event_busy : Icons.event_available,
             ),
             label: Text(
               _isAttending ? 'Cancelar asistencia' : 'Confirmar asistencia',
@@ -1250,6 +1104,47 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ),
             label: Text(
               _isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
+    required this.title,
+    required this.icon,
+    required this.content,
+  });
+
+  final String title;
+  final IconData icon;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: const Color(0xFF94A3B8)),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: textTheme.titleMedium?.copyWith(
+              color: const Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              content,
+              style: textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF64748B),
+              ),
             ),
           ),
         ],
@@ -1296,8 +1191,7 @@ class _NotificationSettingsScreenState
       _attendanceReminders =
           prefs.getBool(NotificationService.attendanceRemindersKey) ?? true;
       _attendanceIds =
-          (prefs.getStringList(NotificationService.attendanceIdsKey) ?? [])
-              .toSet();
+          (prefs.getStringList(attendingEventIdsKey) ?? []).toSet();
     });
   }
 
@@ -1331,7 +1225,7 @@ class _NotificationSettingsScreenState
     for (final id in _attendanceIds) {
       final event = eventsById[id];
       if (event != null) {
-        await NotificationService.instance.scheduleAttendanceNotifications(
+        await NotificationService.instance.scheduleEventNotifications(
           event,
         );
       }
@@ -1340,155 +1234,29 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notificaciones'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        padding: const EdgeInsets.all(20),
         children: [
-          Text(
-            'Configura tus avisos',
-            style: textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Activa solo lo que quieras recibir en tu teléfono.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _NotificationToggleTile(
-            title: 'Recomendaciones diarias',
-            subtitle: 'Eventos sugeridos cada mañana a las 10:00 AM.',
+          SwitchListTile(
             value: _dailyRecommendations,
             onChanged: _toggleDailyRecommendations,
+            title: const Text('Recomendaciones diarias'),
+            subtitle: const Text('Recibe sugerencias de eventos cada mañana.'),
           ),
-          const SizedBox(height: 12),
-          _NotificationToggleTile(
-            title: 'Recordatorios de asistencia',
-            subtitle: 'Avisos cuando confirmas que vas a un evento.',
+          const SizedBox(height: 8),
+          SwitchListTile(
             value: _attendanceReminders,
             onChanged: _toggleAttendanceReminders,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Puedes cambiar estas opciones en cualquier momento.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF94A3B8),
+            title: const Text('Recordatorios de asistencia'),
+            subtitle: const Text(
+              'Recibe avisos antes de los eventos confirmados.',
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NotificationToggleTile extends StatelessWidget {
-  const _NotificationToggleTile({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: textTheme.titleMedium),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailSection extends StatelessWidget {
-  const _DetailSection({
-    required this.title,
-    required this.icon,
-    required this.content,
-  });
-
-  final String title;
-  final IconData icon;
-  final String content;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: colorScheme.primary),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    content,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

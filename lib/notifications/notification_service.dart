@@ -17,7 +17,6 @@ class NotificationService {
       'daily_recommendations_enabled';
   static const String attendanceRemindersKey =
       'attendance_reminders_enabled';
-  static const String attendanceIdsKey = 'attendance_event_ids';
 
   static const int _dailyRecommendationsId = 1001;
 
@@ -68,34 +67,33 @@ class NotificationService {
     }
   }
 
-        Future<void> showTestNow() async {
-          await initialize(); // asegura init + timezone
+  Future<void> showTestNow() async {
+    await initialize();
 
-          const details = NotificationDetails(
-            android: AndroidNotificationDetails(
-              'tuplan_test',
-              'Tests',
-              channelDescription: 'Canal de pruebas',
-              importance: Importance.max,
-              priority: Priority.high,
-            ),
-            iOS: DarwinNotificationDetails(),
-          );
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'tuplan_test',
+        'Tests',
+        channelDescription: 'Canal de pruebas',
+        importance: Importance.max,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(),
+    );
 
-          await _plugin.show(
-            9999,
-            'TuPlan (TEST)',
-            'Si ves esto, permisos/canal OK ✅',
-            details,
-          );
-        }
-
-
+    await _plugin.show(
+      9999,
+      'TuPlan (TEST)',
+      'Si ves esto, permisos/canal OK ✅',
+      details,
+    );
+  }
 
   Future<void> updateDailyRecommendations({
     required List<EventItem> events,
     required Set<String> favoriteIds,
   }) async {
+    await initialize();
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(dailyRecommendationsKey) ?? false;
     if (!enabled) {
@@ -124,13 +122,12 @@ class NotificationService {
   }
 
   Future<void> cancelDailyRecommendations() async {
+    await initialize();
     await _plugin.cancel(_dailyRecommendationsId);
   }
 
-  Future<void> scheduleAttendanceNotifications(EventItem event) async {
-    if (event.startsAt == null) {
-      return;
-    }
+  Future<void> scheduleEventNotifications(EventItem event) async {
+    await initialize();
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(attendanceRemindersKey) ?? true;
     if (!enabled) {
@@ -140,16 +137,19 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
     final eventStart = tz.TZDateTime(
       tz.local,
-      event.startsAt!.year,
-      event.startsAt!.month,
-      event.startsAt!.day,
-      event.startsAt!.hour,
-      event.startsAt!.minute,
+      event.startsAt.year,
+      event.startsAt.month,
+      event.startsAt.day,
+      event.startsAt.hour,
+      event.startsAt.minute,
     );
 
     if (eventStart.isBefore(now)) {
       return;
     }
+
+    final baseId = _attendanceNotificationBaseId(event);
+    final zone = _eventZone(event);
 
     final sameDayTenAm = tz.TZDateTime(
       tz.local,
@@ -160,9 +160,9 @@ class NotificationService {
     );
     if (sameDayTenAm.isAfter(now)) {
       await _plugin.zonedSchedule(
-        _attendanceNotificationId(event, 1),
-        'TuPlan',
-        'Hoy tienes: ${event.title}',
+        baseId,
+        'TuPlan: Evento hoy',
+        'Hoy tienes: ${event.title}. Revisa detalles en la app.',
         sameDayTenAm,
         _attendanceDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -172,9 +172,9 @@ class NotificationService {
     final oneHourBefore = eventStart.subtract(const Duration(hours: 1));
     if (oneHourBefore.isAfter(now)) {
       await _plugin.zonedSchedule(
-        _attendanceNotificationId(event, 2),
-        'TuPlan',
-        'En 1 hora empieza: ${event.title}',
+        baseId + 1,
+        'TuPlan: Tu evento empieza pronto',
+        '${event.title} en $zone comienza en 1 hora.',
         oneHourBefore,
         _attendanceDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -182,12 +182,15 @@ class NotificationService {
     }
   }
 
-  Future<void> cancelAttendanceNotifications(EventItem event) async {
-    await _plugin.cancel(_attendanceNotificationId(event, 1));
-    await _plugin.cancel(_attendanceNotificationId(event, 2));
+  Future<void> cancelEventNotifications(EventItem event) async {
+    await initialize();
+    final baseId = _attendanceNotificationBaseId(event);
+    await _plugin.cancel(baseId);
+    await _plugin.cancel(baseId + 1);
   }
 
   Future<void> cancelAttendanceNotificationsForIds(Iterable<String> ids) async {
+    await initialize();
     for (final id in ids) {
       final event = kEvents.firstWhere(
         (event) => eventId(event) == id,
@@ -205,7 +208,7 @@ class NotificationService {
       if (event.title.isEmpty) {
         continue;
       }
-      await cancelAttendanceNotifications(event);
+      await cancelEventNotifications(event);
     }
   }
 
@@ -258,22 +261,12 @@ class NotificationService {
         .toList();
   }
 
-  int _attendanceNotificationId(EventItem event, int offset) {
-    final hash = _stableHash(eventId(event));
-    return (hash % 1000000) * 10 + offset;
+  int _attendanceNotificationBaseId(EventItem event) {
+    return eventId(event).hashCode.abs() % 100000;
   }
 
-  int _stableHash(String value) {
-    var hash = 0;
-    for (final codeUnit in value.codeUnits) {
-      hash = 0x1fffffff & (hash + codeUnit);
-      hash = 0x1fffffff & (hash + ((hash & 0x0007ffff) << 10));
-      hash ^= (hash >> 6);
-    }
-    hash = 0x1fffffff & (hash + ((hash & 0x03ffffff) << 3));
-    hash ^= (hash >> 11);
-    hash = 0x1fffffff & (hash + ((hash & 0x00003fff) << 15));
-    return hash;
+  String _eventZone(EventItem event) {
+    return event.location.split(',').first.trim();
   }
 
   tz.TZDateTime _nextTenAm() {
@@ -291,21 +284,18 @@ class NotificationService {
     return scheduledDate;
   }
 
-          Future<void> _configureLocalTimeZone() async {
-            tz.initializeTimeZones();
+  Future<void> _configureLocalTimeZone() async {
+    tz.initializeTimeZones();
 
-            final tzInfo = await FlutterTimezone.getLocalTimezone();
-            final String timeZoneName = tzInfo.identifier; // <-- tiene que ser String
+    final tzInfo = await FlutterTimezone.getLocalTimezone();
+    final String timeZoneName = tzInfo.identifier;
 
-            try {
-              tz.setLocalLocation(tz.getLocation(timeZoneName));
-            } catch (_) {
-              // Fallback por si el emulador devuelve algo raro/no soportado
-              tz.setLocalLocation(tz.getLocation('UTC'));
-            }
-          }
-
-
+    try {
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('UTC'));
+    }
+  }
 
   NotificationDetails get _recommendationsDetails {
     const androidDetails = AndroidNotificationDetails(
