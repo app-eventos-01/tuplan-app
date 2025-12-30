@@ -5,9 +5,23 @@ import 'data/attendance_store.dart';
 import 'data/events.dart';
 import 'notifications/notification_service.dart';
 
-void main() {
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/login_screen.dart';
+import 'supabase_config.dart';
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'TU_SUPABASE_URL',
+    anonKey: 'TU_SUPABASE_ANON_KEY',
+  );
+
   runApp(const TuPlanApp());
 }
+
 
 class TuPlanApp extends StatelessWidget {
   const TuPlanApp({super.key});
@@ -120,7 +134,7 @@ class TuPlanApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SplashRouter(),
+      home: const AuthGate(),
     );
   }
 }
@@ -1303,5 +1317,21 @@ class _SplashRouterState extends State<SplashRouter> {
         child: CircularProgressIndicator(),
       ),
     );
+  }
+}
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+
+    if (session != null) {
+      // Usuario ya autenticado
+      return const HomeShell();
+    }
+
+    // Usuario NO autenticado
+    return const LoginScreen();
   }
 }
