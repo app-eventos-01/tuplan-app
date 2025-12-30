@@ -120,7 +120,7 @@ class TuPlanApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const OnboardingScreen(),
+      home: const SplashRouter(),
     );
   }
 }
@@ -192,7 +192,12 @@ class OnboardingScreen extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerRight,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('onboarding_complete', true);
+
+                          if (!context.mounted) return;
+
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
                               builder: (_) => const HomeShell(),
@@ -1257,6 +1262,45 @@ class _NotificationSettingsScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+class SplashRouter extends StatefulWidget {
+  const SplashRouter({super.key});
+
+  @override
+  State<SplashRouter> createState() => _SplashRouterState();
+}
+
+class _SplashRouterState extends State<SplashRouter> {
+  static const _onboardingCompleteKey = 'onboarding_complete';
+
+  @override
+  void initState() {
+    super.initState();
+    _route();
+  }
+
+  Future<void> _route() async {
+    final prefs = await SharedPreferences.getInstance();
+    final completed = prefs.getBool(_onboardingCompleteKey) ?? false;
+
+    if (!mounted) return;
+
+    final next = completed ? const HomeShell() : const OnboardingScreen();
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => next),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Pantalla simple mientras decide a dónde ir
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }
