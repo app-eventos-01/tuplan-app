@@ -1,16 +1,56 @@
-# tuplan_app
+# TuPlan (Flutter + FastAPI)
 
-A new Flutter project.
+Este repositorio contiene:
 
-## Getting Started
+- **App Flutter** (`/lib`) que consume eventos vía HTTP.
+- **Backend FastAPI** (`/backend`) conectado a PostgreSQL.
+- **Panel web simple** en `/panel` para insertar eventos manualmente.
 
-This project is a starting point for a Flutter application.
+## Backend (FastAPI + PostgreSQL)
 
-A few resources to get you started if this is your first Flutter project:
+1. Instala dependencias:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+2. Configura la base de datos con la variable:
+
+```
+export DATABASE_URL="postgresql+psycopg2://tuplan:tuplan@localhost:5432/tuplan"
+```
+
+3. Arranca el servidor:
+
+```
+uvicorn app.main:app --reload
+```
+
+### Endpoints principales
+
+- `GET /eventos`
+- `GET /eventos/{id}`
+- `POST /eventos`
+- `PUT /eventos/{id}`
+- `DELETE /eventos/{id}`
+
+### Panel web
+
+Visita `http://localhost:8000/panel` para crear eventos manualmente.
+
+## Flutter (consumo HTTP)
+
+El cliente obtiene eventos desde `lib/data/events_api.dart` con `kApiBaseUrl`.
+
+Ejemplos de base URL:
+
+- Emulador Android: `http://10.0.2.2:8000`
+- iOS simulator / web local: `http://localhost:8000`
+
+## Permisos
+
+Las reglas de permisos por rol y empresa están documentadas en
+`backend/README_PERMISOS.md`.
