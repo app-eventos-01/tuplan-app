@@ -20,7 +20,7 @@ pip install -r requirements.txt
 2. Configura la base de datos con la variable:
 
 ```
-export DATABASE_URL="postgresql+psycopg2://tuplan:tuplan@localhost:5432/tuplan"
+export DATABASE_URL="postgresql+psycopg://tuplan:tuplan@localhost:5432/tuplan"
 ```
 
 3. Arranca el servidor:

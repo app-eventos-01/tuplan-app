@@ -8,7 +8,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg2://tuplan:tuplan@localhost:5432/tuplan",
+    "postgresql+psycopg://tuplan:tuplan@localhost:5432/tuplan",
 )
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
