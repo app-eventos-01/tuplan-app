@@ -1,4 +1,0 @@
-class SupabaseConfig {
-  static const url = 'ishttmnfgvbgsygwbqim';
-  static const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzaHR0bW5mZ3ZiZ3N5Z3dicWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNjUzNDcsImV4cCI6MjA4MjY0MTM0N30.CuzV9CHx0mqTtZjEecUl2wmgRsqC_YFQAPEYxDQSXfs';
-}

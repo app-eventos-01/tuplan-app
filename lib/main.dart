@@ -3,21 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/attendance_store.dart';
 import 'data/events.dart';
+import 'data/events_api.dart';
 import 'notifications/notification_service.dart';
-
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/login_screen.dart';
-import 'supabase_config.dart';
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: 'TU_SUPABASE_URL',
-    anonKey: 'TU_SUPABASE_ANON_KEY',
-  );
 
   runApp(const TuPlanApp());
 }
@@ -134,7 +125,7 @@ class TuPlanApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AuthGate(),
+      home: const SplashRouter(),
     );
   }
 }
@@ -250,6 +241,10 @@ class _HomeShellState extends State<HomeShell> {
   static const String _favoritesStorageKey = 'favorite_event_ids';
   
   final Set<String> _favoriteIds = {};
+  final EventsApi _eventsApi = EventsApi();
+  List<EventItem> _events = [];
+  bool _isLoadingEvents = false;
+  String? _eventsError;
   int _selectedIndex = 0;
 
   @override
@@ -261,14 +256,10 @@ class _HomeShellState extends State<HomeShell> {
  Future<void> _bootstrap() async {
   await NotificationService.instance.initialize();
   await NotificationService.instance.requestPermissions();
+  await _loadEvents();
   await _loadFavorites();
 }
 
-
-  Future<void> _initializeNotifications() async {
-    await NotificationService.instance.initialize();
-    await NotificationService.instance.requestPermissions();
-  }
 
   Future<void> _loadFavorites() async {
     final prefs = await SharedPreferences.getInstance();
@@ -282,9 +273,33 @@ class _HomeShellState extends State<HomeShell> {
         ..addAll(savedIds);
     });
     await NotificationService.instance.updateDailyRecommendations(
-      events: kEvents,
+      events: _events,
       favoriteIds: _favoriteIds,
     );
+  }
+
+  Future<void> _loadEvents() async {
+    setState(() {
+      _isLoadingEvents = true;
+      _eventsError = null;
+    });
+    try {
+      final events = await _eventsApi.fetchEvents();
+      if (!mounted) return;
+      setState(() {
+        _events = events;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _eventsError = 'No pudimos cargar los eventos.';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingEvents = false;
+      });
+    }
   }
 
   Future<void> _toggleFavorite(EventItem event) async {
@@ -299,7 +314,7 @@ class _HomeShellState extends State<HomeShell> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_favoritesStorageKey, _favoriteIds.toList());
     await NotificationService.instance.updateDailyRecommendations(
-      events: kEvents,
+      events: _events,
       favoriteIds: _favoriteIds,
     );
   }
@@ -310,11 +325,15 @@ class _HomeShellState extends State<HomeShell> {
 
     final screens = [
       EventsHomeScreen(
+        events: _events,
+        isLoading: _isLoadingEvents,
+        errorMessage: _eventsError,
+        onRetry: _loadEvents,
         favoriteIds: _favoriteIds,
         onFavoriteToggle: _toggleFavorite,
       ),
       FavoritesScreen(
-        events: kEvents,
+        events: _events,
         favoriteIds: _favoriteIds,
         onFavoriteToggle: _toggleFavorite,
       ),
@@ -330,7 +349,7 @@ class _HomeShellState extends State<HomeShell> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => NotificationSettingsScreen(
-                    events: kEvents,
+                    events: _events,
                     favoriteIds: _favoriteIds,
                   ),
                 ),
@@ -381,10 +400,18 @@ class _HomeShellState extends State<HomeShell> {
 class EventsHomeScreen extends StatefulWidget {
   const EventsHomeScreen({
     super.key,
+    required this.events,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
     required this.favoriteIds,
     required this.onFavoriteToggle,
   });
 
+  final List<EventItem> events;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback onRetry;
   final Set<String> favoriteIds;
   final void Function(EventItem event) onFavoriteToggle;
 
@@ -483,6 +510,9 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
             events: _filteredEvents.take(3).toList(),
             favoriteIds: widget.favoriteIds,
             onFavoriteToggle: widget.onFavoriteToggle,
+            isLoading: widget.isLoading,
+            errorMessage: widget.errorMessage,
+            onRetry: widget.onRetry,
           ),
           const SizedBox(height: 24),
           Text('Cerca de ti', style: textTheme.titleLarge),
@@ -492,6 +522,9 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
             events: _filteredEvents,
             favoriteIds: widget.favoriteIds,
             onFavoriteToggle: widget.onFavoriteToggle,
+            isLoading: widget.isLoading,
+            errorMessage: widget.errorMessage,
+            onRetry: widget.onRetry,
           ),
           const SizedBox(height: 80),
         ],
@@ -500,7 +533,7 @@ class _EventsHomeScreenState extends State<EventsHomeScreen> {
   }
 
   List<EventItem> get _filteredEvents {
-    return kEvents.where((event) {
+    return widget.events.where((event) {
       final matchesCategory = _selectedCategories.contains(event.category);
       final matchesPrice = !_onlyFree || event.price.toLowerCase().contains('libre');
       return matchesCategory && matchesPrice;
@@ -514,16 +547,57 @@ class _EventListSection extends StatelessWidget {
     required this.events,
     required this.favoriteIds,
     required this.onFavoriteToggle,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
   });
 
   final String title;
   final List<EventItem> events;
   final Set<String> favoriteIds;
   final void Function(EventItem event) onFavoriteToggle;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    if (isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              errorMessage!,
+              style: textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: onRetry,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (events.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -1234,7 +1308,10 @@ class _NotificationSettingsScreenState
     await prefs.setBool(NotificationService.attendanceRemindersKey, value);
     if (!value) {
       await NotificationService.instance
-          .cancelAttendanceNotificationsForIds(_attendanceIds);
+          .cancelAttendanceNotificationsForIds(
+        ids: _attendanceIds,
+        events: widget.events,
+      );
       return;
     }
 
@@ -1317,21 +1394,5 @@ class _SplashRouterState extends State<SplashRouter> {
         child: CircularProgressIndicator(),
       ),
     );
-  }
-}
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final session = Supabase.instance.client.auth.currentSession;
-
-    if (session != null) {
-      // Usuario ya autenticado
-      return const HomeShell();
-    }
-
-    // Usuario NO autenticado
-    return const LoginScreen();
   }
 }

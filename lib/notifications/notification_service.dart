@@ -189,12 +189,16 @@ class NotificationService {
     await _plugin.cancel(baseId + 1);
   }
 
-  Future<void> cancelAttendanceNotificationsForIds(Iterable<String> ids) async {
+  Future<void> cancelAttendanceNotificationsForIds({
+    required Iterable<String> ids,
+    required List<EventItem> events,
+  }) async {
     await initialize();
     for (final id in ids) {
-      final event = kEvents.firstWhere(
+      final event = events.firstWhere(
         (event) => eventId(event) == id,
         orElse: () => EventItem(
+          id: 0,
           title: '',
           date: '',
           startsAt: DateTime.now(),
